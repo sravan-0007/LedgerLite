@@ -1,0 +1,168 @@
+<div class="dashboard-container">
+  <!-- Header Bar -->
+  <header class="dashboard-header">
+    <div class="header-title">
+      <h1>LedgerLite</h1>
+      <!-- <span class="badge">Team Expense Tracker</span> -->
+    </div>
+    <div class="user-profile-bar" *ngIf="currentUserProfile">
+      <span>Welcome, <strong>{{ currentUserProfile.name }}</strong> ({{ currentUserProfile.role }})</span>
+      <button (click)="onSignOut()" class="btn-secondary">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- Main Grid Layout -->
+  <main class="dashboard-content">
+    
+    <!-- Category Running Totals -->
+    <section class="totals-section">
+      <h3>Category Summary</h3>
+      <div class="totals-grid">
+        <div class="total-card" *ngFor="let cat of categories">
+          <span class="total-label">{{ cat }}</span>
+          <span class="total-amount">₹{{ (categoryTotals[cat] || 0) | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filters and CRUD bar -->
+    <section class="controls-bar">
+      <div class="filters-container">
+        <h3>Filters</h3>
+        <div class="filters-inputs">
+          <div class="filter-group">
+            <label for="filterCategory">Category</label>
+            <select id="filterCategory" [(ngModel)]="filterCategory" (change)="applyFilters()">
+              <option value="">All Categories</option>
+              <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="filterStartDate">From</label>
+            <input type="date" id="filterStartDate" [(ngModel)]="filterStartDate" (change)="applyFilters()" />
+          </div>
+
+          <div class="filter-group">
+            <label for="filterEndDate">To</label>
+            <input type="date" id="filterEndDate" [(ngModel)]="filterEndDate" (change)="applyFilters()" />
+          </div>
+
+          <button (click)="clearFilters()" class="btn-clear">Clear Filters</button>
+        </div>
+      </div>
+
+      <!-- Add Expense Button -->
+      <div class="action-container" *ngIf="currentUserProfile?.role === 'member'">
+        <button (click)="openAddModal()" class="btn-primary">+ Add Expense</button>
+      </div>
+    </section>
+
+    <!-- Expense List Table -->
+    <section class="expense-list-section">
+      <h3>Expenses</h3>
+      <div class="table-container">
+        <table class="expense-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Note</th>
+              <th *ngIf="currentUserProfile?.role === 'manager'">Added By</th>
+              <th *ngIf="currentUserProfile?.role === 'member'">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let expense of filteredExpenses">
+              <td>{{ expense.date + 'T00:00:00' | date:'dd/MM/yyyy' }}</td>
+              <td><span class="category-tag">{{ expense.category }}</span></td>
+              <td class="amount-cell">₹{{ expense.amount | number:'1.2-2' }}</td>
+              <td>{{ expense.note || '-' }}</td>
+              <td *ngIf="currentUserProfile?.role === 'manager'">{{ userNames[expense.userId] || expense.userId }}</td>
+              <td *ngIf="currentUserProfile?.role === 'member'">
+                <button (click)="openEditModal(expense)" class="btn-action btn-edit">Edit</button>
+                <button (click)="deleteExpense(expense.id)" class="btn-action btn-delete">Delete</button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredExpenses.length === 0">
+              <td [attr.colspan]="currentUserProfile?.role === 'manager' ? 5 : 6" class="empty-cell">
+                No expenses added matching the criteria.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add Expense Modal -->
+  <div class="modal-overlay" *ngIf="showAddModal">
+    <div class="modal-card">
+      <h2>Add Expense</h2>
+      <form (ngSubmit)="addExpense()">
+        <div class="form-group">
+          <label for="newAmount">Amount (₹) *</label>
+          <input type="number" id="newAmount" name="newAmount" [(ngModel)]="newAmount" step="0.01" required min="0.01" />
+        </div>
+
+        <div class="form-group">
+          <label for="newCategory">Category *</label>
+          <select id="newCategory" name="newCategory" [(ngModel)]="newCategory" required>
+            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="newDate">Date *</label>
+          <input type="date" id="newDate" name="newDate" [(ngModel)]="newDate" required />
+        </div>
+
+        <div class="form-group">
+          <label for="newNote">Note</label>
+          <textarea id="newNote" name="newNote" [(ngModel)]="newNote" rows="3"></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" (click)="closeAddModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Add Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Expense Modal -->
+  <div class="modal-overlay" *ngIf="showEditModal">
+    <div class="modal-card">
+      <h2>Edit Expense</h2>
+      <form (ngSubmit)="updateExpense()">
+        <div class="form-group">
+          <label for="editAmount">Amount (₹) *</label>
+          <input type="number" id="editAmount" name="editAmount" [(ngModel)]="editAmount" step="0.01" required min="0.01" />
+        </div>
+
+        <div class="form-group">
+          <label for="editCategory">Category *</label>
+          <select id="editCategory" name="editCategory" [(ngModel)]="editCategory" required>
+            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="editDate">Date *</label>
+          <input type="date" id="editDate" name="editDate" [(ngModel)]="editDate" required />
+        </div>
+
+        <div class="form-group">
+          <label for="editNote">Note</label>
+          <textarea id="editNote" name="editNote" [(ngModel)]="editNote" rows="3"></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" (click)="closeEditModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
