@@ -153,7 +153,7 @@ Each expense document contains:
 Email
 
 ```
-member1@ledgerlite.com
+member@ledgerlite.com
 ```
 
 Password
